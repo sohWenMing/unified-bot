@@ -403,30 +403,85 @@ reference markdown versions that can be used for generating
 artifacts.
 ```
 
-### Step 6.2: Create Reference Folders
+### Step 6.2.1: Create Technical Protection (.cursorignore)
 
-For each folder found, create corresponding reference folder:
+Create a .cursorignore file at the workspace root to block all write operations to SharePoint folders:
 
 ```bash
-cd .. && mkdir -p folder1_reference_md folder2_reference_md unfiled_reference_md artifacts
+python setup.py --create-cursorignore --json
 ```
+
+Parse the JSON output. If successful, display:
+
+```
+Creating technical protection for SharePoint folders...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+I'm setting up protection so that your original SharePoint
+documents cannot be accidentally modified through this bot.
+
+Protected folders:
+- [folder1]
+- [folder2]
+- ...
+
+These folders are now READ-ONLY through Cursor.
+```
+
+**If this fails:**
+- Show error message
+- Continue with setup (protection will be incomplete but setup can proceed)
+
+### Step 6.2.2: Create Reference and Artifacts Folders
+
+For each SharePoint folder, create a corresponding reference markdown folder.
+Also create the artifacts folder with subfolders.
+
+```bash
+python setup.py --create-folders --json
+```
+
+Parse the JSON output. If successful, display:
+
+```
+Creating output folders...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Created reference folders:
+✓ folder1_reference_md/
+✓ folder2_reference_md/
+✓ unfiled_reference_md/
+
+Created artifacts folders:
+✓ artifacts/user_stories/
+✓ artifacts/reports/
+✓ artifacts/exports/
+✓ artifacts/images/
+```
+
+**If this fails:**
+- Show error message
+- Continue with setup (folders can be created manually later)
 
 ### Step 6.3: Save Protected Paths
 
-Update config/protected_paths.json with the original SharePoint folders:
+Update config/protected_paths.json with the original SharePoint folders from scan results:
+
 ```bash
-python -c "
-import json
-from datetime import datetime
-folders = ['folder1', 'folder2']  # From scan results
-config = {
-    'protected_folders': folders,
-    'protection_enabled': True,
-    'configured_at': datetime.now().isoformat()
-}
-with open('config/protected_paths.json', 'w') as f:
-    json.dump(config, f, indent=2)
+cd unified-bot && python -c "
+from setup import scan_sharepoint_structure, save_protected_paths
+scan_result = scan_sharepoint_structure()
+folder_names = [f['name'] for f in scan_result.get('folders', [])]
+save_protected_paths(folder_names)
+print('Protected paths saved')
 "
+```
+
+Display:
+```
+Saved protected folder list to config/protected_paths.json
+
+[Show list of protected folders]
 ```
 
 ### Step 6.4: Generate Initial Reference Markdown

@@ -1,6 +1,27 @@
 {
-  "protected_folders": [],
+  "protected_folders": [
+    "03 Proposal",
+    "04 Project Management",
+    "05 Requirements and Design",
+    "06 Development",
+    "07 Testing",
+    "08 Training",
+    "09 Deployment",
+    "10 Change Requests",
+    "11 Warranty and Support",
+    "12 QA+",
+    "13 Technical",
+    "14 AI Summary",
+    "99 Admin",
+    "AI Mentor Studio Report",
+    "Infrastructure",
+    "Licensing",
+    "Platform Upgrade",
+    "Server AD - Cryptography Certificate",
+    "SIM_Platform_Vendor VPN Setup",
+    "Useful Resources"
+  ],
   "protection_enabled": true,
-  "configured_at": null,
-  "notes": "These folders are original SharePoint folders and should NEVER be written to by the bot. Only reference markdown folders and artifacts can be modified."
+  "configured_at": "2026-01-14T18:38:10.062032",
+  "notes": "These folders are original SharePoint folders and should NEVER be written to by the bot."
 }

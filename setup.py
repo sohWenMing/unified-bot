@@ -607,6 +607,73 @@ def save_protected_paths(folders: List[str]) -> None:
         json.dump(config, f, indent=2)
 
 
+def create_cursorignore(folders: List[str]) -> Dict[str, Any]:
+    """Create .cursorignore file at SharePoint root to protect folders."""
+    sharepoint_root = get_sharepoint_root()
+    if not sharepoint_root:
+        return {"success": False, "error": "Could not find SharePoint root directory"}
+    
+    cursorignore_path = sharepoint_root / ".cursorignore"
+    
+    content = """# SharePoint folders - PROTECTED (READ ONLY)
+# These folders contain original source documents
+# Cursor cannot write to, modify, or delete files in these folders
+
+"""
+    for folder in folders:
+        content += f"{folder}/\n"
+    
+    content += """
+# Allow reference markdown folders
+!*_reference_md/
+
+# Allow artifacts folder
+!artifacts/
+
+# Allow the bot folder
+!unified-bot/
+"""
+    
+    try:
+        with open(cursorignore_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"success": True, "path": str(cursorignore_path)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def create_reference_folders(folders: List[str]) -> Dict[str, Any]:
+    """Create reference markdown folders and artifacts folder."""
+    sharepoint_root = get_sharepoint_root()
+    if not sharepoint_root:
+        return {"success": False, "error": "Could not find SharePoint root directory"}
+    
+    created = []
+    errors = []
+    
+    try:
+        # Create reference folders for each SharePoint folder
+        for folder in folders:
+            ref_folder = sharepoint_root / f"{folder}_reference_md"
+            ref_folder.mkdir(exist_ok=True)
+            created.append(str(ref_folder))
+        
+        # Create unfiled reference folder
+        unfiled = sharepoint_root / "unfiled_reference_md"
+        unfiled.mkdir(exist_ok=True)
+        created.append(str(unfiled))
+        
+        # Create artifacts folder with subfolders
+        artifacts = sharepoint_root / "artifacts"
+        for subfolder in ["user_stories", "reports", "exports", "images"]:
+            (artifacts / subfolder).mkdir(parents=True, exist_ok=True)
+        created.append(str(artifacts))
+        
+        return {"success": True, "created": created, "errors": errors}
+    except Exception as e:
+        return {"success": False, "error": str(e), "created": created}
+
+
 # =============================================================================
 # Main Functions
 # =============================================================================
@@ -685,6 +752,8 @@ def main():
     parser.add_argument("--backup-git", action="store_true", help="Backup sub-repo git directories")
     parser.add_argument("--init-git", action="store_true", help="Initialize git at bot level")
     parser.add_argument("--scan-sharepoint", action="store_true", help="Scan SharePoint structure")
+    parser.add_argument("--create-cursorignore", action="store_true", help="Create .cursorignore for protection")
+    parser.add_argument("--create-folders", action="store_true", help="Create reference and artifact folders")
     
     args = parser.parse_args()
     
@@ -742,6 +811,36 @@ def main():
             print(f"  Root files: {len(result.get('files_at_root', []))}")
             for folder in result.get('folders', []):
                 print(f"    - {folder['name']} ({folder['file_count']} files)")
+        return
+    
+    if args.create_cursorignore:
+        # Get folder names from scan
+        sp_result = scan_sharepoint_structure()
+        folder_names = [f["name"] for f in sp_result.get("folders", [])]
+        result = create_cursorignore(folder_names)
+        if args.json:
+            print(json.dumps(result, indent=2))
+        else:
+            if result.get("success"):
+                print(f"Created .cursorignore at: {result['path']}")
+            else:
+                print(f"Failed to create .cursorignore: {result.get('error', 'Unknown error')}")
+        return
+    
+    if args.create_folders:
+        # Get folder names from scan
+        sp_result = scan_sharepoint_structure()
+        folder_names = [f["name"] for f in sp_result.get("folders", [])]
+        result = create_reference_folders(folder_names)
+        if args.json:
+            print(json.dumps(result, indent=2))
+        else:
+            if result.get("success"):
+                print("Created folders:")
+                for folder in result.get("created", []):
+                    print(f"  ✓ {folder}")
+            else:
+                print(f"Failed to create folders: {result.get('error', 'Unknown error')}")
         return
     
     # Save status if requested

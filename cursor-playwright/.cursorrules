@@ -7,13 +7,47 @@ This is a self-healing automated end-to-end testing framework using Playwright, 
 
 ### Test Generation Protocol
 When generating new tests, ALWAYS follow this exact sequence:
-1. **Verify Behavior First**: Use browser plugin to navigate and verify the described behavior is achievable
-2. **Capture Element Interactions**: Record all element refs and actions performed
-3. **Generate Robust Locators**: Use Playwright MCP's `browser_generate_locator` tool for each interacted element
-4. **Write Test Code**: Create TypeScript test file following Playwright best practices
-5. **Execute and Verify**: Run the generated test to ensure it passes
+
+⚠️ **MANDATORY: Browser verification MUST happen before test code generation**
+
+1. **Verify Behavior First** (MANDATORY - DO NOT SKIP):
+   - Use browser plugin to navigate to the starting URL
+   - Use `browser_snapshot` to capture page structure
+   - For EACH step in the behavior description:
+     - Identify elements needed using browser snapshot
+     - Perform the actual action (click, type, select) using browser plugin
+     - Verify the action succeeded with another snapshot
+     - Record element references and selectors that worked
+   - **NEVER proceed to test generation without completing browser verification**
+
+2. **Capture Element Interactions**: 
+   - Record all element refs from browser snapshots
+   - Document what selectors worked (getByRole, getByLabel, getByText, etc.)
+   - Note any timing requirements observed
+
+3. **Generate Robust Locators**: 
+   - Use ONLY the selectors verified in browser
+   - Prefer getByRole, getByLabel, getByText based on what worked
+   - Use Playwright MCP's `browser_generate_locator` if available
+   - **DO NOT guess or assume - use browser-verified data only**
+
+4. **Write Test Code**: 
+   - Create TypeScript test file using browser-verified selectors
+   - Reference browser verification in comments
+   - Follow Playwright best practices
+
+5. **Execute and Verify** (MANDATORY - TEST MUST PASS):
+   - **MUST run the test script**: `npx playwright test tests/[test-name].spec.ts`
+   - **MUST verify exit code is 0** (test passed)
+   - **MUST verify all assertions pass**
+   - If test fails: Analyze error, fix, and retry (max 5 attempts)
+   - **DO NOT proceed to next step unless test passes**
+   - If all 5 attempts fail: STOP and report failure - test generation is incomplete
+
 6. **Create Self-Heal Command**: Generate a test-specific command for future healing
+
 7. **Document Behavior**: Create markdown file describing the test behavior
+
 8. **Prompt User Verification**: Ask user to run test in headed mode for visual confirmation
 
 ### Browser Plugin + Playwright MCP Integration
@@ -129,9 +163,10 @@ When user triggers a self-heal command:
 2. Read the existing test file to understand current implementation
 3. Use browser plugin to verify behavior is achievable
 4. Generate new test using same protocol as initial generation
-5. Run test to verify it passes
+5. **MUST run test to verify it passes** (exit code 0)
 6. If fails, retry up to 5 times with different approaches
-7. If all attempts fail, report to user for manual intervention
+7. **DO NOT consider self-heal complete unless test passes**
+8. If all attempts fail, report to user for manual intervention
 
 ## Test Script Modification Protocol
 
@@ -140,13 +175,15 @@ When user requests direct changes to an existing test file in `tests/*.spec.ts`:
 ### Step 1: Apply Changes
 Make the requested modifications to the test script.
 
-### Step 2: Execute Test
+### Step 2: Execute Test (MANDATORY - MUST PASS)
 Run the modified test to verify it passes:
 ```bash
 npx playwright test tests/[test-name].spec.ts
 ```
+- **MUST check exit code: 0 = pass, non-zero = fail**
 - If fails: Attempt to fix (max 3 attempts), then report to user
-- If passes: Continue to next step
+- **ONLY if passes (exit code 0): Continue to next step**
+- **DO NOT proceed if test does not pass**
 
 ### Step 3: Prompt Headed Verification
 ```
