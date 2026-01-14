@@ -1,0 +1,109 @@
+# ============================================
+# Bot Meta-Repository - Unified .gitignore
+# ============================================
+
+# ============================================
+# ENVIRONMENT & SECRETS (CRITICAL)
+# ============================================
+.env
+.env.*
+!.env.example
+
+# ============================================
+# Python Virtual Environments
+# ============================================
+.venv/
+venv/
+env/
+.venv_test/
+
+# ============================================
+# Python Cache & Build
+# ============================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# ============================================
+# Node.js Dependencies
+# ============================================
+node_modules/
+
+# ============================================
+# Playwright Test Artifacts
+# ============================================
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ============================================
+# TypeScript
+# ============================================
+*.tsbuildinfo
+
+# ============================================
+# IDE & Editor Files
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ============================================
+# OS Generated Files
+# ============================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ============================================
+# Logs
+# ============================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Temporary Files
+# ============================================
+*.tmp
+*.temp
+*.bak
+
+# ============================================
+# Git Backup Directories
+# ============================================
+.git_backup/
+**/.git_backup/
+
+# ============================================
+# Test Files (development only)
+# ============================================
+ba_markitdown/test_files/
+
+# ============================================
+# Package Lock Files (optional - uncomment if needed)
+# ============================================
+# package-lock.json
+# uv.lock
+
+# ============================================
+# SharePoint Reference Folders (track these)
+# ============================================
+# These ARE tracked - do NOT ignore them
+# ../*_reference_md/
+# ../artifacts/
+# ../unfiled_reference_md/
+
+# ============================================
+# Local Configuration Files
+# ============================================
+# config/setup_status.json  # May contain local paths - comment out if you want to track

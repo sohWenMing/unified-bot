@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bot-meta-repository"
+version = "1.0.0"
+description = "Unified bot for document conversion, test automation, and artifact generation"
+dependencies = [
+    "markitdown[all]",
+    "openai",
+    "python-dotenv",
+    "openpyxl",
+    "xlsxwriter"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]

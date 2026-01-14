@@ -1,0 +1,6 @@
+{
+  "protected_folders": [],
+  "protection_enabled": true,
+  "configured_at": null,
+  "notes": "These folders are original SharePoint folders and should NEVER be written to by the bot. Only reference markdown folders and artifacts can be modified."
+}

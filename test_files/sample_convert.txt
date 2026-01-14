@@ -1,0 +1,15 @@
+Sample Document for Verification Testing
+
+This is a simple text file used during setup verification.
+
+It contains:
+1. A title
+2. A numbered list
+3. Some plain text paragraphs
+
+The bot will attempt to convert this to markdown to verify
+that the document conversion system is working correctly.
+
+If you're reading this in a markdown file, the conversion worked!
+
+End of sample document.

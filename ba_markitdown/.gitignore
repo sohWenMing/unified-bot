@@ -1,0 +1,49 @@
+# Virtual environments
+.venv/
+venv/
+env/
+.venv_test/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Secrets and configuration
+.env
+.env.*
+!.env.example
+
+# Setup status (contains local paths)
+.setup_status.json
+
+# Original files to be converted (user's source files)
+# These folders and their contents are tracked by default
+# Users can add files here and they will be tracked in git
+
+# Converted files - tracked by default
+# Users can add converted files here and they will be tracked in git
+
+# Test files (for development)
+test_files/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/

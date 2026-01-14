@@ -1,0 +1,171 @@
+# File Protection Rules - SharePoint Read-Only Enforcement
+
+This rule ensures that original SharePoint folders are NEVER modified through the bot. Only reference markdown folders and artifacts can be written to.
+
+**PRIORITY: CRITICAL** - These rules take precedence over all other operations.
+
+## Protected Paths
+
+Protected paths are defined in `config/protected_paths.json`. These are the original SharePoint folders that contain source documents.
+
+**RULE: NEVER write to, modify, or delete files in protected paths.**
+
+## Before ANY File Operation
+
+Before writing, modifying, or deleting ANY file:
+
+### Step 1: Load Protected Paths
+
+```bash
+cat config/protected_paths.json
+```
+
+Read the `protected_folders` array.
+
+### Step 2: Check Target Path
+
+Compare the target file path against protected folders:
+- If path starts with or is within ANY protected folder → BLOCK
+- If path is in `*_reference_md` folder → ALLOW
+- If path is in `artifacts/` folder → ALLOW
+- If path is in `bot/` folder → ALLOW
+
+### Step 3: If Protected Path Detected
+
+**IMMEDIATELY STOP** and display:
+
+```
+⚠️ PROTECTED PATH - OPERATION BLOCKED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+I cannot write to or modify files in: [path]
+
+This is an original SharePoint folder. These folders are 
+READ-ONLY to protect your source documents.
+
+What I CAN do:
+✓ Read files from this folder
+✓ Convert files to reference markdown (in *_reference_md folders)
+✓ Generate artifacts based on this content (in artifacts/ folder)
+
+What I CANNOT do:
+✗ Create files in this folder
+✗ Modify files in this folder
+✗ Delete files in this folder
+
+If you need to edit these files, please do so directly
+through your SharePoint/file system access.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Do NOT proceed with the operation.**
+
+## Allowed Write Locations
+
+Files CAN be written to:
+
+1. **Reference Markdown Folders**: `../*_reference_md/`
+   - For converted document markdown files
+   
+2. **Artifacts Folder**: `../artifacts/`
+   - For generated artifacts (user stories, reports, exports)
+   
+3. **Bot Folder**: `bot/` and all subdirectories
+   - For configuration, tests, commands, etc.
+   
+4. **Unfiled Reference**: `../unfiled_reference_md/`
+   - For markdown from root-level files
+
+## Validation Function
+
+When executing any write operation, validate:
+
+```python
+def is_path_protected(target_path, protected_folders):
+    """Check if target path is in a protected folder."""
+    target = Path(target_path).resolve()
+    
+    for protected in protected_folders:
+        protected_path = Path(protected).resolve()
+        try:
+            target.relative_to(protected_path)
+            return True  # Path is inside protected folder
+        except ValueError:
+            continue
+    
+    return False  # Path is not protected
+```
+
+## User Attempts to Bypass
+
+If user explicitly asks to modify a protected file:
+
+```
+I understand you want to modify [file], but I cannot do that.
+
+This file is in a protected SharePoint folder. The protection 
+exists to ensure source documents are only modified through 
+proper channels (by administrators with direct access).
+
+Here's what you can do instead:
+1. Contact an administrator to make changes to the source file
+2. After changes are made, run "sync references" to update 
+   the markdown versions
+3. Work with the updated reference markdown
+
+Would you like me to help with any of these options?
+```
+
+## Error Messages
+
+### Attempting to Create File in Protected Path:
+```
+Cannot create file in protected folder: [folder_name]
+
+This is an original SharePoint folder. New files should be 
+added through your normal SharePoint access, not through this bot.
+```
+
+### Attempting to Delete File in Protected Path:
+```
+Cannot delete file from protected folder: [folder_name]
+
+Deleting source documents must be done through proper channels,
+not through this bot.
+
+Note: Even if a source file is deleted, its markdown reference
+will be preserved (marked as orphaned).
+```
+
+### Attempting to Modify File in Protected Path:
+```
+Cannot modify file in protected folder: [folder_name]
+
+To update this document:
+1. Edit it directly through SharePoint/file system
+2. Run "sync references" to update the markdown version
+```
+
+## Integration with Commands
+
+All commands that involve file operations must:
+
+1. Check `config/protected_paths.json` before any write
+2. Validate target path is not protected
+3. If protected, show warning and refuse operation
+4. Log attempted violations (optional)
+
+## Audit Trail (Optional)
+
+Consider logging protection violations:
+
+```json
+{
+  "timestamp": "2026-01-14T10:30:00",
+  "attempted_operation": "write",
+  "target_path": "../folder1/document.pdf",
+  "blocked": true,
+  "reason": "Protected SharePoint folder"
+}
+```

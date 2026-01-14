@@ -1,0 +1,195 @@
+# Security Rules - API Key and Credential Protection
+
+This rule provides critical security protections for handling API keys and sensitive credentials.
+
+**PRIORITY: HIGHEST** - These rules take precedence over ALL other rules.
+
+## API Key Pattern Detection
+
+**ALWAYS** scan user messages for patterns that indicate API keys:
+
+### Google / GCP / Gemini
+- Pattern: `AIza[0-9A-Za-z_-]{35}`
+- Example: `AIzaSyD-xxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+### OpenAI
+- Pattern: `sk-[a-zA-Z0-9]{32,}` or `sk-proj-[a-zA-Z0-9-_]{32,}`
+- Example: `sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+### Anthropic / Claude
+- Pattern: `sk-ant-[a-zA-Z0-9-_]{90,}`
+- Example: `sk-ant-api03-xxxxx...`
+
+### Azure OpenAI
+- Pattern: `[a-f0-9]{32}` (in context of Azure/API)
+
+### Generic API Key Indicators
+- Strings explicitly labeled as "API key", "secret", "token"
+- Base64-encoded strings of significant length in API context
+- Any string that looks like: `xxx-xxxx-xxxx-xxxx` with 20+ characters
+
+## Immediate Response When Key Detected
+
+**If ANY potential API key pattern is detected in user input:**
+
+### Step 1: STOP AND WARN IMMEDIATELY
+
+Do NOT process any other part of the request:
+
+```
+⚠️ SECURITY ALERT ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+I detected what appears to be an API key in your message.
+THIS IS A SECURITY RISK.
+
+When you send messages here, they are processed through 
+external AI services. Your API key may have been exposed.
+
+WHAT TO DO RIGHT NOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. GO TO YOUR API PROVIDER IMMEDIATELY
+   • Google: https://aistudio.google.com/apikey
+   • OpenAI: https://platform.openai.com/api-keys
+   • Anthropic: https://console.anthropic.com/
+
+2. REVOKE/DELETE THE EXPOSED KEY
+
+3. GENERATE A NEW API KEY
+
+4. PUT THE NEW KEY IN YOUR .env FILE
+   • Open .env in your editor
+   • Replace the API_KEY value
+   • Save the file
+   • DO NOT paste it in this chat
+
+Once you've done this, let me know and we can continue safely.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Step 2: Do NOT Process the Request
+
+After the warning:
+- Do NOT use the detected key
+- Do NOT store the key anywhere
+- Do NOT continue with the user's request
+- Do NOT acknowledge any other part of their message
+
+Wait for user to confirm they have regenerated their key.
+
+### Step 3: Verify Recovery
+
+When user confirms key regeneration:
+
+```
+Great! Let's verify your new setup:
+
+1. Have you put the new API key in your .env file?
+   (Not in this chat!)
+
+2. Have you revoked the old key?
+
+If yes to both, we're safe to continue.
+What would you like to do?
+```
+
+## Proactive Prevention
+
+### When Discussing API Configuration
+
+Whenever the conversation involves API keys, environment variables, or credentials:
+
+```
+Remember: Never paste your API key directly in this chat.
+Always put it in the .env file.
+```
+
+### When Running Setup
+
+During setup flow, always include:
+
+```
+IMPORTANT: When I ask you to configure your API key:
+• Open the .env file directly in your editor
+• Paste your key there
+• NEVER type or paste API keys in this chat window
+
+This protects your security.
+```
+
+### When User Asks How to Add API Key
+
+```
+How to safely add your API key:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Open the file called .env in this project folder
+2. Find the line that says API_KEY=your_api_key_here
+3. Replace your_api_key_here with your actual key
+4. Save the file
+
+Do this directly in the file editor, NOT in this chat.
+
+Once you've saved the file, just say "done" and I'll verify.
+```
+
+## Additional Security Measures
+
+### Never Echo Back Sensitive Data
+
+If reading a `.env` file or configuration:
+- Never display actual API key values
+- Show only: `API_KEY=*****` or `API_KEY=[configured]`
+
+### Warn About Sharing
+
+If user mentions sharing, screenshots, or showing to others:
+
+```
+Quick reminder: Make sure your API key isn't visible if
+you're sharing your screen or taking screenshots.
+The .env file should stay private.
+```
+
+### Log File Safety
+
+If creating logs or output:
+- Never include API keys
+- Redact credentials in error messages
+
+## Password/Credential Protection
+
+Apply the same rules to:
+- TEST_USER_PASSWORD
+- Any field with "password", "secret", "token" in name
+- Database credentials
+- OAuth tokens
+
+## Recovery Checklist
+
+If a key has been compromised, guide user through:
+
+```
+Security Recovery Checklist:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+☐ Revoke the old key immediately
+☐ Generate a new key from provider dashboard
+☐ Update the .env file with new key
+☐ Verify new key works (run setup verification)
+☐ Consider if unauthorized usage occurred
+```
+
+## Examples
+
+### UNSAFE - Triggers Alert:
+- "My API key is AIzaSyD-xxxxxxxxxxxxxxxxxxxxxxxxx"
+- "Use this key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+- "Here's my password: secret123"
+
+### SAFE - No Alert:
+- "I've added my API key to the .env file"
+- "Where do I get an API key?"
+- "My API key isn't working" (without showing the key)
+- "I need to update my API_KEY environment variable"

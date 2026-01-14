@@ -1,0 +1,26 @@
+{
+  "categories": {
+    "user_stories": {
+      "description": "User story documents for development teams",
+      "source_references": [],
+      "output_formats": ["markdown"]
+    },
+    "images": {
+      "description": "Generated images and diagrams",
+      "source_references": [],
+      "output_formats": ["png", "svg"]
+    },
+    "reports": {
+      "description": "Generated reports and summaries",
+      "source_references": [],
+      "output_formats": ["markdown", "xlsx", "csv"]
+    },
+    "exports": {
+      "description": "Exported data files",
+      "source_references": [],
+      "output_formats": ["xlsx", "csv", "json"]
+    }
+  },
+  "global_sources": ["unfiled_reference_md"],
+  "configured_at": null
+}

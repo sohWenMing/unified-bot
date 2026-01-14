@@ -1,0 +1,258 @@
+# Execution Mode Rules - Venv vs Ephemeral
+
+This rule defines how to determine and use the correct execution mode for running Python and Node.js commands.
+
+**PRIORITY: HIGH** - Always check execution mode before running commands.
+
+## Determining Execution Mode
+
+### Step 1: Read Setup Status
+
+Before executing ANY Python or Node.js command:
+
+```bash
+cat config/setup_status.json
+```
+
+Look for the `install_mode` field:
+- `"venv"` - Use standard execution
+- `"venv_pip"` - Use standard execution  
+- `"ephemeral"` - Use on-demand execution
+
+### Step 2: Select Command Prefix
+
+Based on `install_mode`:
+
+| install_mode | Python Commands | Node Commands |
+|--------------|-----------------|---------------|
+| `venv` | `python script.py` | `npm run` / `npx` |
+| `venv_pip` | `python script.py` | `npm run` / `npx` |
+| `ephemeral` | `uv run python script.py` | `npx` |
+| `null`/missing | `uv run python script.py` | `npx` |
+
+## Python Commands
+
+### Venv Mode (install_mode = "venv" or "venv_pip")
+
+Standard execution - dependencies are installed in virtual environment:
+
+```bash
+# Run a Python script
+python ba_markitdown/main.py input.pdf output.md
+
+# Run a Python module
+python -m module_name
+
+# Run verification script
+python test_files/verify_markitdown.py
+```
+
+### Ephemeral Mode (install_mode = "ephemeral" or null)
+
+On-demand execution - dependencies loaded fresh each time:
+
+```bash
+# Run a Python script
+uv run python ba_markitdown/main.py input.pdf output.md
+
+# Run a Python module
+uv run python -m module_name
+
+# Run verification script
+uv run python test_files/verify_markitdown.py
+```
+
+**Note:** Ephemeral mode may take a few seconds longer to start as dependencies are loaded.
+
+## Node.js Commands
+
+### Either Mode
+
+Node commands use the same approach regardless of install_mode:
+
+```bash
+# Run tests
+npx playwright test
+
+# Run with npm scripts
+npm run test
+
+# Install packages (if node_modules doesn't exist)
+npm install
+```
+
+### Playwright Specific
+
+```bash
+# Run all tests
+npx playwright test
+
+# Run headed
+npx playwright test --headed
+
+# Run specific test
+npx playwright test tests/login.spec.ts
+
+# Install browsers
+npx playwright install chromium
+```
+
+## Command Wrapper Pattern
+
+For every command that runs Python or Node.js, follow this pattern:
+
+### Pattern for Cursor Instructions
+
+```
+## Before Execution
+
+1. Read config/setup_status.json
+2. Get install_mode value
+3. Determine command prefix
+
+## Execute Command
+
+If install_mode is "venv" or "venv_pip":
+   python [script]
+   
+If install_mode is "ephemeral" or null/missing:
+   uv run python [script]
+```
+
+## User Communication
+
+**IMPORTANT:** Never tell users about execution mode details.
+
+From the user's perspective, everything "just works." They don't need to know:
+- That dependencies are loaded on-demand
+- The difference between venv and ephemeral
+- Any uv or npx details
+
+### What Users See
+
+**Correct (hide technical details):**
+```
+Converting your file...
+✓ Converted: report.pdf → report.md
+```
+
+**Incorrect (exposes technical details):**
+```
+Running: uv run python ba_markitdown/main.py...
+Loading dependencies via ephemeral mode...
+```
+
+## Error Handling
+
+### If uv Is Not Available in Ephemeral Mode
+
+```bash
+which uv || echo "not found"
+```
+
+If uv is not found and mode is ephemeral:
+
+```
+There's a configuration issue with the setup.
+Please run "setup" again to fix this.
+```
+
+Then attempt to guide user through fixing the issue.
+
+### If npm/npx Is Not Available
+
+```bash
+which npm || echo "not found"
+```
+
+If npm is not found:
+
+```
+Node.js doesn't appear to be installed.
+Testing features require Node.js.
+
+To install:
+1. Go to https://nodejs.org/
+2. Download the LTS version
+3. Run the installer
+4. Restart this terminal
+
+Then run "setup" again.
+```
+
+## Speed Considerations
+
+### Venv Mode
+- First run: Normal speed
+- Subsequent runs: Normal speed
+- Recommended when possible
+
+### Ephemeral Mode
+- First run: Slower (loading dependencies)
+- Subsequent runs: Same (always reloads)
+- Used when venv creation fails
+
+Inform users when ephemeral mode causes delay:
+
+```
+Setting things up... (this takes a moment in your environment)
+```
+
+But do NOT explain why or mention ephemeral mode.
+
+## Integration Examples
+
+### Convert Files Command
+
+```
+# Step 1: Get mode
+cat config/setup_status.json | grep install_mode
+
+# Step 2: Execute based on mode
+# If venv:
+python ba_markitdown/main.py "input.pdf" "output.md"
+
+# If ephemeral:
+uv run python ba_markitdown/main.py "input.pdf" "output.md"
+```
+
+### Run Tests Command
+
+```
+# Tests always use npx (works in both modes)
+cd cursor-playwright && npx playwright test
+```
+
+### Verification Tests
+
+```
+# Python verification
+# If venv:
+python test_files/verify_markitdown.py
+python test_files/verify_api.py
+
+# If ephemeral:
+uv run python test_files/verify_markitdown.py
+uv run python test_files/verify_api.py
+
+# Node verification (always same)
+node test_files/verify_playwright.js
+```
+
+## Updating Setup Status
+
+When setup completes or mode changes, update config/setup_status.json:
+
+```python
+import json
+from datetime import datetime
+
+with open('config/setup_status.json', 'r') as f:
+    status = json.load(f)
+
+status['install_mode'] = 'venv'  # or 'ephemeral'
+status['last_setup'] = datetime.now().isoformat()
+
+with open('config/setup_status.json', 'w') as f:
+    json.dump(status, f, indent=2)
+```

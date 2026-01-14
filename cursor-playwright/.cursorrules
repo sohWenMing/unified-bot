@@ -1,0 +1,267 @@
+# Self-Healing E2E Test Framework Rules
+
+## Project Overview
+This is a self-healing automated end-to-end testing framework using Playwright, designed for non-technical users to generate, execute, and maintain regression tests.
+
+## Core Workflow Principles
+
+### Test Generation Protocol
+When generating new tests, ALWAYS follow this exact sequence:
+1. **Verify Behavior First**: Use browser plugin to navigate and verify the described behavior is achievable
+2. **Capture Element Interactions**: Record all element refs and actions performed
+3. **Generate Robust Locators**: Use Playwright MCP's `browser_generate_locator` tool for each interacted element
+4. **Write Test Code**: Create TypeScript test file following Playwright best practices
+5. **Execute and Verify**: Run the generated test to ensure it passes
+6. **Create Self-Heal Command**: Generate a test-specific command for future healing
+7. **Document Behavior**: Create markdown file describing the test behavior
+8. **Prompt User Verification**: Ask user to run test in headed mode for visual confirmation
+
+### Browser Plugin + Playwright MCP Integration
+- Browser plugin verifies behavior and captures element references
+- Playwright MCP `browser_generate_locator` converts element refs to robust Playwright locators
+- Agent writes test code combining captured actions with generated locators
+
+## Playwright Best Practices (CRITICAL)
+
+### Locator Strategy Priority (Use in this order):
+1. **getByRole()** - Preferred for accessibility and resilience
+   ```typescript
+   page.getByRole('button', { name: 'Submit' })
+   page.getByRole('textbox', { name: 'Email' })
+   ```
+
+2. **getByLabel()** - Excellent for form fields
+   ```typescript
+   page.getByLabel('Email')
+   page.getByLabel('Password')
+   ```
+
+3. **getByPlaceholder()** - Good for inputs without labels
+   ```typescript
+   page.getByPlaceholder('Enter your email')
+   ```
+
+4. **getByText()** - For visible text content
+   ```typescript
+   page.getByText('Welcome back')
+   ```
+
+5. **getByTestId()** - Only if data-testid attributes exist
+   ```typescript
+   page.getByTestId('submit-button')
+   ```
+
+6. **CSS Selectors** - AVOID unless absolutely necessary (brittle)
+
+### Always Use:
+- Proper waits with `expect()` assertions instead of hard waits
+- Auto-waiting built into Playwright actions
+- Descriptive test names that explain the behavior being tested
+- `test.describe()` blocks to group related tests
+- Soft assertions when checking multiple conditions
+
+### Never Use:
+- `sleep()` or `setTimeout()` - use auto-waiting instead
+- Overly specific CSS selectors (e.g., `div.class1.class2 > span:nth-child(3)`)
+- Fixed wait times
+- Hard-coded credentials in test files
+
+## Security Rules (NON-NEGOTIABLE)
+
+### Credentials Management:
+- **NEVER** hard-code credentials in test files
+- **ALWAYS** read from `process.env` variables
+- **ALWAYS** use `dotenv` to load `.env` file
+- Check if `.env` exists before generating first test
+- If `.env` doesn't exist, create it and prompt user for credentials
+
+Example:
+```typescript
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+await page.getByLabel('Email').fill(process.env.TEST_USER_EMAIL!);
+await page.getByLabel('Password').fill(process.env.TEST_USER_PASSWORD!);
+```
+
+### .env File Creation:
+When creating `.env` for the first time:
+1. Copy from `env.template`
+2. Prompt user for actual credentials
+3. Remind user that `.env` is git-ignored
+
+## File Organization
+
+### Test Files:
+- Location: `tests/` directory (flat structure)
+- Naming: `[feature-name].spec.ts` (descriptive, kebab-case)
+- One test scenario per file for easy indexing
+- Each file should have corresponding behavior doc in `test-behaviors/`
+
+### Behavior Documentation:
+- Location: `test-behaviors/` directory
+- Naming: `[feature-name].md` (matches test file name)
+- Content: Step-by-step description of expected behavior
+- Used for self-healing reference
+
+### Self-Heal Commands:
+- Location: `.cursor/commands/` directory
+- Naming: `self-heal-[feature-name].md`
+- Must include:
+  - Original behavior steps
+  - Exact test file path
+  - Statement that user verified behavior still works
+  - Instruction to regenerate test (max 5 attempts)
+
+## Test Execution Commands
+
+When user runs tests, parse results and provide:
+- Total tests run
+- Pass/Fail counts
+- List of failed tests with clear next steps:
+  - If behavior should still work → Use self-heal command
+  - If behavior changed → Contact dev team (true negative)
+
+## Self-Healing Workflow
+
+When user triggers a self-heal command:
+1. Read the behavior description from the referenced behavior file
+2. Read the existing test file to understand current implementation
+3. Use browser plugin to verify behavior is achievable
+4. Generate new test using same protocol as initial generation
+5. Run test to verify it passes
+6. If fails, retry up to 5 times with different approaches
+7. If all attempts fail, report to user for manual intervention
+
+## Test Script Modification Protocol
+
+When user requests direct changes to an existing test file in `tests/*.spec.ts`:
+
+### Step 1: Apply Changes
+Make the requested modifications to the test script.
+
+### Step 2: Execute Test
+Run the modified test to verify it passes:
+```bash
+npx playwright test tests/[test-name].spec.ts
+```
+- If fails: Attempt to fix (max 3 attempts), then report to user
+- If passes: Continue to next step
+
+### Step 3: Prompt Headed Verification
+```
+✓ Test passed!
+
+Since you've modified this test, please verify it visually:
+Run command: "Run Test in Headed Mode" or I can run it for you now.
+
+Would you like me to run the test in headed mode? (yes/no)
+```
+
+### Step 4: Sync Behavior File
+Check if changes affect `test-behaviors/[test-name].md`:
+- Compare the test script changes against the behavior file
+- If behavior-affecting changes detected (e.g., button text, element names, steps), show diff:
+```
+The test changes may require updating the behavior file:
+
+CURRENT:
+[relevant section from behavior file]
+
+PROPOSED:
+[updated section reflecting test changes]
+
+Apply these changes to the behavior file? (yes/no)
+```
+- If user confirms, update the behavior file
+- Update "Last Verified" timestamp in behavior file
+
+### Step 5: Confirm Completion
+```
+✓ Test modification complete!
+
+Changes made:
+- [test file changes summary]
+- [behavior file changes if any]
+
+The self-heal command will now use the updated behavior from:
+test-behaviors/[test-name].md
+```
+
+## Context7 Integration
+
+When writing tests:
+1. Query Context7 for latest Playwright best practices
+2. Search for: "Playwright non-brittle test selectors"
+3. Search for: "Playwright test assertions best practices"
+4. Use latest recommendations from official docs
+
+## Test Structure Template
+
+```typescript
+import { test, expect } from '@playwright/test';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+test.describe('[Feature Name]', () => {
+  test('[specific behavior description]', async ({ page }) => {
+    // Setup / Navigate
+    await page.goto(process.env.APP_URL!);
+    
+    // Actions (with descriptive comments)
+    await page.getByLabel('Email').fill(process.env.TEST_USER_EMAIL!);
+    await page.getByLabel('Password').fill(process.env.TEST_USER_PASSWORD!);
+    await page.getByRole('button', { name: 'Log In' }).click();
+    
+    // Assertions (verify expected state)
+    await expect(page).toHaveURL(/.*dashboard/);
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  });
+});
+```
+
+## Git Workflow Support
+
+When user requests Git operations:
+- Show clear, non-technical explanations
+- Confirm destructive operations before executing
+- Create safety branches before rollbacks
+- Provide success confirmations
+- Never use technical Git jargon without explanation
+
+## Error Handling
+
+When tests fail:
+1. Capture screenshot and trace
+2. Provide clear error message
+3. Suggest next steps (self-heal vs. bug report)
+4. Never assume the test is wrong without verification
+
+## User Communication
+
+- Use non-technical language
+- Provide step-by-step guidance
+- Explain what's happening and why
+- Confirm actions before destructive operations
+- Celebrate successes (e.g., "Test generated successfully! ✓")
+
+## Quality Gates
+
+Before marking a test as "ready":
+- ✓ Behavior verified via browser plugin
+- ✓ Test passes when executed
+- ✓ Uses robust locators (no brittle CSS)
+- ✓ Credentials from environment variables
+- ✓ Self-heal command created
+- ✓ Behavior documentation created
+- ✓ User confirmed in headed mode
+
+## Continuous Improvement
+
+When regenerating tests:
+- Learn from previous failures
+- Try alternative locator strategies
+- Consider timing issues (add proper waits)
+- Check for dynamic content handling
+- Verify authentication state persistence
