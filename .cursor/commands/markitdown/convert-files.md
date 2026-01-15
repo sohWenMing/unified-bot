@@ -10,6 +10,7 @@ This command converts documents from your SharePoint folders to LLM-friendly mar
 ## Trigger Phrases
 
 Activate when user says:
+
 - "Convert my files"
 - "Convert files"
 - "Transform my documents"
@@ -30,15 +31,18 @@ cat config/setup_status.json
 ```
 
 If `setup_complete` is false or `env_configured` is false:
+
 ```
 You haven't completed setup yet. Would you like to run setup first?
 Say "setup" to get started.
 ```
+
 STOP and wait for user.
 
 ### Step 2: Get Install Mode
 
 Note the `install_mode` from setup_status.json:
+
 - "venv" → use `python ba_markitdown/main.py`
 - "ephemeral" → use `uv run python ba_markitdown/main.py`
 
@@ -57,7 +61,10 @@ python setup.py --scan-sharepoint --json
 ```
 
 Parse results to get:
+
 - SharePoint folders and their files
+  - For this also parse SharePoint folders recursively, to get all files
+  - All child folders and files of the SharePoint folders should be selectable for conversion if the user specifies a folder or filename
 - Root-level files (for unfiled_reference_md)
 
 ═══════════════════════════════════════════════════════════════
@@ -114,6 +121,7 @@ ls -la ../unfiled_reference_md/ 2>/dev/null | grep "[filename].md"
 ### Step 2.2: Report Existing Conversions
 
 If markdown files exist:
+
 ```
 Some files have been converted before:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -140,11 +148,21 @@ PHASE 3: DETERMINE OUTPUT LOCATIONS
 For each file to convert, determine the correct reference folder:
 
 **Files in SharePoint folders:**
+
 - Source: `../folder1/document.pdf`
 - Output: `../folder1_reference_md/document.md`
 - Organization: `folder1_reference_md`
 
+```
+If the file that is being converted is part of a nested subdirectory of the
+parent Sharepoint folder, then this rule should also apply to the file being converted.
+No need to create subfoldres in the reference_md folder, all converted markdown files
+should be stored in a flat structure in this directory.
+
+```
+
 **Root-level files:**
+
 - Source: `../notes.txt`
 - Output: `../unfiled_reference_md/notes.md`
 - Organization: `unfiled_reference_md`
@@ -191,6 +209,7 @@ Wait for confirmation.
 ### Step 4.2: Execute Conversions
 
 For each file, show progress:
+
 ```
 Converting files...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -199,11 +218,13 @@ Converting files...
 ```
 
 **venv mode:**
+
 ```bash
 python ba_markitdown/main.py "../folder1/document1.pdf" "../folder1_reference_md/document1.md" --cleanup --frontmatter --organization "folder1_reference_md"
 ```
 
 **ephemeral mode:**
+
 ```bash
 uv run python ba_markitdown/main.py "../folder1/document1.pdf" "../folder1_reference_md/document1.md" --cleanup --frontmatter --organization "folder1_reference_md"
 ```
@@ -211,6 +232,7 @@ uv run python ba_markitdown/main.py "../folder1/document1.pdf" "../folder1_refer
 **Important:** Use relative paths `../` to go up from bot folder to SharePoint level.
 
 After each file:
+
 ```
 ✓ Converted: document1.pdf → folder1_reference_md/document1.md
 
@@ -224,6 +246,7 @@ PHASE 5: HANDLE ERRORS
 ### Error Types and Handling
 
 **If conversion fails:**
+
 ```
 ⚠️ Couldn't convert: [filename]
 
@@ -234,6 +257,7 @@ c) Stop here
 ```
 
 **For ffmpeg errors (audio/video):**
+
 ```
 This file requires special software (ffmpeg) that isn't installed.
 
@@ -243,12 +267,14 @@ b) Get instructions for installing ffmpeg
 ```
 
 **For password-protected files:**
+
 ```
 This file appears to be password-protected.
 Please provide an unprotected version to convert.
 ```
 
 **If SharePoint folder not found:**
+
 ```
 I couldn't find the SharePoint folder: [folder_name]
 
@@ -274,10 +300,10 @@ Results:
   📁 folder1_reference_md/
      - document1.pdf → document1.md
      - report.xlsx → report.md
-  
+
   📁 folder2_reference_md/
      - specs.docx → specs.md
-  
+
   📄 unfiled_reference_md/
      - notes.txt → notes.md
 
@@ -304,13 +330,14 @@ When user says "Convert report.pdf":
 
 1. Scan SharePoint structure to find the file
 2. If not found:
+
    ```
    I couldn't find "report.pdf" in your SharePoint folders.
-   
+
    Please check:
    - Is the file in one of your SharePoint folders?
    - Is the bot folder in the correct location?
-   
+
    Or tell me which folder it's in and I'll convert it.
    ```
 
@@ -361,12 +388,14 @@ NOTES
 ═══════════════════════════════════════════════════════════════
 
 **File Organization:**
+
 - Files from SharePoint folders → corresponding `*_reference_md` folders
 - Root-level files → `unfiled_reference_md` folder
 - This matches the structure used by `sync-references.md`
 
 **Frontmatter:**
 Each converted markdown file includes frontmatter with:
+
 - source_file: Original filename
 - source_path: Relative path to original
 - source_modified: Timestamp of source file
